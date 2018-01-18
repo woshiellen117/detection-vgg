@@ -6,6 +6,7 @@ import cv2
 import tensorflow as tf
 import xlrd
 import time
+import numpy as np
 
 IMAGE_SIZE = 448
 NUM_IMAGES = 100
@@ -20,6 +21,9 @@ SEED = 66478
 NUM_LABELS = 2
 LEARNING_RATE = 0.1
 EVAL_FREQUENCY = 10
+
+FLAGS = None
+
 
 def data_type():
   """Return the type of the activations, weights, and placeholder variables."""
@@ -74,6 +78,12 @@ def load_label(xml_path):
     labels = array(labels)
     return labels
 
+def error_rate(predictions, labels):
+  """Return the error rate based on dense predictions and sparse labels."""
+  return 100.0 - (
+      100.0 *
+      np.sum(np.argmax(predictions, 1) == labels) /
+      predictions.shape[0])
 
 def main(_):
     file_path = "D:\\final\\thumb"
@@ -371,6 +381,18 @@ def main(_):
                 start_time = time.time()
                 print('Step %d (epoch %.2f), %.1f ms' %(step, float(step) * BATCH_SIZE / train_size,
                        1000 * dur_time/ EVAL_FREQUENCY))
+                print('Minibatch loss: %.3f, learning rate: %.6f' % (l, lr))
+                print('Minibatch error: %.1f%%' % error_rate(predictions, batch_labels))
+                print('Validation error: %.1f%%' % error_rate(
+                    eval_in_batches(validation_data, sess), validation_labels))
+                sys.stdout.flush()
+                # Finally print the result!
+            test_error = error_rate(eval_in_batches(test_data, sess), test_labels)
+            print('Test error: %.1f%%' % test_error)
+            if FLAGS.self_test:
+                print('test_error', test_error)
+                assert test_error == 0.0, 'expected 0.0 test_error, got %.2f' % (
+                    test_error,)
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
