@@ -370,7 +370,7 @@ def main(_):
                 dur_time = time.time() - start_time
                 start_time = time.time()
                 print('Step %d (epoch %.2f), %.1f ms' %(step, float(step) * BATCH_SIZE / train_size,
-                       1000 * elapsed_time / EVAL_FREQUENCY))
+                       1000 * dur_time/ EVAL_FREQUENCY))
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
