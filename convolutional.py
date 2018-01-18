@@ -251,6 +251,7 @@ def main(_):
                                          0.9).minimize(loss,
                                                        global_step=batch)
 
+
   # Predictions for the current training minibatch.
   train_prediction = tf.nn.softmax(logits)
 
