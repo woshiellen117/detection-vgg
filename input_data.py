@@ -9,10 +9,10 @@ import time
 import numpy as np
 
 IMAGE_SIZE = 448
-NUM_IMAGES = 100
+NUM_IMAGES = 1000
 NUM_CHANNELS = 1
 PIXEL_DEPTH = 255
-VALIDATION_SIZE = 50
+VALIDATION_SIZE = 100
 NUM_EPOCHS = 2
 BATCH_SIZE = 16
 EVAL_BATCH_SIZE = 16
@@ -21,7 +21,9 @@ SEED = 66478
 NUM_LABELS = 2
 LEARNING_RATE = 0.1
 EVAL_FREQUENCY = 10
-
+TEST_SIZE = 200
+TEST_IMAGES_BEGIN = 1000
+TEST_IMAGES_END =1200
 FLAGS = None
 
 
@@ -67,7 +69,7 @@ def load_label(xml_path):
     labels_table = labels_xml.sheets()[0]
     defect = labels_table.col_values(3)[0:NUM_IMAGES]
     labels = []
-    for i in range(NUM_IMAGES):
+    for i in range(TEST_IMAGES_END):
         if defect[i]==DEFECT:
             labels.append(1)
         elif defect[i] == '':
@@ -86,20 +88,22 @@ def error_rate(predictions, labels):
       predictions.shape[0])
 
 def main(_):
-    file_path = "D:\\final\\thumb"
+    file_path = "/Volumes/TOSHIBA EXT/final/try"
     str = file_path + '/*.png'
-    xml_path = "D:\\final\\final.xlsx"
+    xml_path = "/Volumes/TOSHIBA EXT/final/final.xlsx"
     coll = io.ImageCollection(str)
     images = []
-    for i in range(NUM_IMAGES):
+    for i in range(TEST_IMAGES_END):
         images.append(load_photo(coll, i))
-    train_images = array(images)
-    train_images = train_images.reshape(NUM_IMAGES,IMAGE_SIZE,IMAGE_SIZE,NUM_CHANNELS)
-    train_labels = load_label(xml_path)
-    validation_data = train_images[:VALIDATION_SIZE, ...]
-    validation_labels = train_labels[:VALIDATION_SIZE]
-    train_data = train_images[VALIDATION_SIZE:, ...]
-    train_labels = train_labels[VALIDATION_SIZE:]
+    images = array(images)
+    images = images.reshape(TEST_IMAGES_END,IMAGE_SIZE,IMAGE_SIZE,NUM_CHANNELS)
+    labels = load_label(xml_path)
+    validation_data = images[:VALIDATION_SIZE, ...]
+    validation_labels = labels[:VALIDATION_SIZE]
+    train_data = images[VALIDATION_SIZE:TEST_IMAGES_BEGIN, ...]
+    train_labels = labels[VALIDATION_SIZE:TEST_IMAGES_BEGIN]
+    test_data = images[TEST_IMAGES_BEGIN:TEST_IMAGES_END]
+    test_labels = labels[TEST_IMAGES_BEGIN:TEST_IMAGES_END]
     num_epochs = NUM_EPOCHS
     train_size = train_labels.shape[0]
 
@@ -251,24 +255,6 @@ def main(_):
                           ksize=[1, 2, 2, 1],
                           strides=[1, 2, 2, 1],
                           padding='SAME')
-        pool = tf.nn.max_pool(relu,
-                          ksize=[1, 2, 2, 1],
-                          strides=[1, 2, 2, 1],
-                          padding='SAME')
-        conv = tf.nn.conv2d(pool,
-                        conv5_weights,
-                        strides=[1, 1, 1, 1],
-                        padding='SAME')
-        relu = tf.nn.relu(tf.nn.bias_add(conv, conv5_biases))
-        conv = tf.nn.conv2d(relu,
-                        conv6_weights,
-                        strides=[1, 1, 1, 1],
-                        padding='SAME')
-        relu = tf.nn.relu(tf.nn.bias_add(conv, conv6_biases))
-        pool = tf.nn.max_pool(relu,
-                          ksize=[1, 2, 2, 1],
-                          strides=[1, 2, 2, 1],
-                          padding='SAME')
         conv = tf.nn.conv2d(pool,
                         conv7_weights,
                         strides=[1, 1, 1, 1],
@@ -326,7 +312,7 @@ def main(_):
                           ksize=[1, 2, 2, 1],
                           strides=[1, 2, 2, 1],
                           padding='SAME')
-        pool_shape = pool.get_shape().aslist()
+        pool_shape = pool.get_shape().as_list()
         pool_reshape = tf.reshape(pool,[pool_shape[0],pool_shape[1]*pool_shape[2]*pool_shape[3]])
         fc = tf.nn.relu(tf.matmul(pool_reshape,fc1_weights)+fc1_biases)
         fc = tf.nn.relu(tf.matmul(fc,fc2_weights)+fc2_biases)
@@ -352,6 +338,21 @@ def main(_):
 
     # Predictions for the test and validation, which we'll compute less often.
     eval_prediction = tf.nn.softmax(model(eval_data))
+
+    def eval_in_batches(data,sess):
+        size = data.shape[0]
+        if size < EVAL_BATCH_SIZE:
+            raise ValueError("Batch size for evals larger than dataset:%d"%size)
+        predictions = np.ndarray(shape = (size,NUM_LABELS),dtype=np.float32)
+        for begin in range(0,size,EVAL_BATCH_SIZE):
+            end = begin + EVAL_BATCH_SIZE
+            if end < size:
+                predictions = sess.run(eval_prediction,feed_dict={eval_data:data[begin:end,...]})
+            else:
+                batch_predictions = sess.run(eval_prediction,feed_dict={eval_data:data[-EVAL_BATCH_SIZE,...]})
+                predictions[begin:,:] = batch_predictions[begin-size:,:]
+        return predictions
+
 
     # Create a local session to run the training.
     start_time = time.time()
@@ -389,10 +390,10 @@ def main(_):
                 # Finally print the result!
             test_error = error_rate(eval_in_batches(test_data, sess), test_labels)
             print('Test error: %.1f%%' % test_error)
-            if FLAGS.self_test:
-                print('test_error', test_error)
-                assert test_error == 0.0, 'expected 0.0 test_error, got %.2f' % (
-                    test_error,)
+            # if FLAGS.self_test:
+            #     print('test_error', test_error)
+            #     assert test_error == 0.0, 'expected 0.0 test_error, got %.2f' % (
+            #         test_error,)
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
