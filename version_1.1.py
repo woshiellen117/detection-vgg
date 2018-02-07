@@ -7,27 +7,26 @@ import tensorflow as tf
 import xlrd
 import time
 import numpy as np
-import os
-
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 IMAGE_SIZE = 448
-NUM_IMAGES = 1000
+NUM_IMAGES = 10000
 NUM_CHANNELS = 1
 PIXEL_DEPTH = 255
-VALIDATION_SIZE = 100
-NUM_EPOCHS = 2
+VALIDATION_SIZE = 2000
+NUM_EPOCHS = 10
 BATCH_SIZE = 16
 EVAL_BATCH_SIZE = 16
-DEFECT = "圆缺"
+DEFECT = "未焊透"
 SEED = 66478
 NUM_LABELS = 2
-LEARNING_RATE = 0.000000000000001
-EVAL_FREQUENCY = 10
+LEARNING_RATE = 0.1
+EVAL_FREQUENCY = 100
 TEST_SIZE = 200
-TEST_IMAGES_BEGIN = 1000
-TEST_IMAGES_END =1200
+TEST_IMAGES_BEGIN = 12000
+TEST_IMAGES_END =12500
 FLAGS = None
+REMARKS = 18 #备注在表中列数
+DEFECTS = 3 #缺陷在表中列数
 
 
 def data_type():
@@ -39,47 +38,29 @@ def data_type():
 
 
 def load_photo(coll,num):
-    h,w = coll[num].shape[:2]
-    a,c = 0,0
-    for i in range(100,w-1):
-        if coll[num][300,i+1]>250:
-            a=i
-            break
-    if a == 0:
-        a = w
-    for i in range(100,h - 1):
-        if coll[num][i, 300] > 250:
-            c = i
-            break
-    if c == 0:
-        c = h
-    crop_img = coll[num][0: c, 0: a]
+    crop_img = coll[num]
     image = cv2.resize(crop_img,(IMAGE_SIZE,IMAGE_SIZE),interpolation=cv2.INTER_CUBIC)
     image = image.reshape(IMAGE_SIZE*IMAGE_SIZE)
     image = (image-PIXEL_DEPTH/2)/PIXEL_DEPTH
     image=image.reshape(IMAGE_SIZE,IMAGE_SIZE)
     print(num)
-    # cv2.namedWindow('image', 0)
-    # cv2.imshow('image',image)
-    # cv2.waitKey(0)
-    # print(a)
-    # print(c)
     return image
 
 
 def load_label(xml_path):
     labels_xml = xlrd.open_workbook(xml_path)
     labels_table = labels_xml.sheets()[0]
-    defect = labels_table.col_values(3)[0:TEST_IMAGES_END]
+    defect = labels_table.col_values(DEFECTS)[1:TEST_IMAGES_END+1]
+    remark = labels_table.col_values(REMARKS)[1:TEST_IMAGES_END+1]
     labels = []
-    for i in range(TEST_IMAGES_END):
+    for i in range(0,TEST_IMAGES_END):
         if defect[i]==DEFECT:
             labels.append(1)
-        elif defect[i] == '':
-            labels.append(0)
-            #无效图像
         else:
-            labels.append(0)
+            if str(remark[i]).find(DEFECT)!=-1:
+                labels.append(1)
+            else:
+                labels.append(0)
     labels = array(labels)
     return labels
 
@@ -92,17 +73,18 @@ def error_rate(predictions, labels):
 
 def main(_):
     # file_path = "/Volumes/TOSHIBA EXT/final/try"
-    file_path = "D:\\final\\try_100"
+    file_path = "D:\\final\\useful_data"
     str = file_path + '/*.png'
     # xml_path = "/Volumes/TOSHIBA EXT/final/final.xlsx"
-    xml_path = "D:\\final\\final.xlsx"
+    xml_path = "D:\\final\\useful_data\\useful_data.xlsx"
+    labels = load_label(xml_path)
     coll = io.ImageCollection(str)
     images = []
     for i in range(TEST_IMAGES_END):
         images.append(load_photo(coll, i))
     images = array(images)
     images = images.reshape(TEST_IMAGES_END,IMAGE_SIZE,IMAGE_SIZE,NUM_CHANNELS)
-    labels = load_label(xml_path)
+
     validation_data = images[:VALIDATION_SIZE, ...]
     validation_labels = labels[:VALIDATION_SIZE]
     train_data = images[VALIDATION_SIZE:TEST_IMAGES_BEGIN, ...]
@@ -127,62 +109,62 @@ def main(_):
                           stddev=0.1,
                           seed=SEED, dtype=data_type()))
     conv1_biases = tf.Variable(tf.zeros([32],dtype = data_type()))
-    conv2_weights = tf.Variable(tf.truncated_normal([3, 3, 32, 32],  # 3x3 filter, depth 32.
-                                stddev=0.1,
-                                seed=SEED, dtype=data_type()))
-    conv2_biases = tf.Variable(tf.zeros([32], dtype=data_type()))
+    # conv2_weights = tf.Variable(tf.truncated_normal([3, 3, 32, 32],  # 3x3 filter, depth 32.
+    #                             stddev=0.1,
+    #                             seed=SEED, dtype=data_type()))
+    # conv2_biases = tf.Variable(tf.zeros([32], dtype=data_type()))
     conv3_weights = tf.Variable(tf.truncated_normal([3, 3, 32, 64],  # 3x3 filter, depth 64.
                                 stddev=0.1,
                                 seed=SEED, dtype=data_type()))
     conv3_biases = tf.Variable(tf.zeros([64], dtype=data_type()))
-    conv4_weights = tf.Variable(tf.truncated_normal([3, 3, 64, 64],  # 3x3 filter, depth 64.
-                                stddev=0.1,
-                                seed=SEED, dtype=data_type()))
-    conv4_biases = tf.Variable(tf.zeros([64], dtype=data_type()))
+    # conv4_weights = tf.Variable(tf.truncated_normal([3, 3, 64, 64],  # 3x3 filter, depth 64.
+    #                             stddev=0.1,
+    #                             seed=SEED, dtype=data_type()))
+    # conv4_biases = tf.Variable(tf.zeros([64], dtype=data_type()))
     conv5_weights = tf.Variable(tf.truncated_normal([3, 3, 64, 128],  # 3x3 filter, depth 128.
                                 stddev=0.1,
                                 seed=SEED, dtype=data_type()))
     conv5_biases = tf.Variable(tf.zeros([128], dtype=data_type()))
-    conv6_weights = tf.Variable(tf.truncated_normal([3, 3, 128, 128],  # 3x3 filter, depth 128.
-                                stddev=0.1,
-                                seed=SEED, dtype=data_type()))
-    conv6_biases = tf.Variable(tf.zeros([128], dtype=data_type()))
+    # conv6_weights = tf.Variable(tf.truncated_normal([3, 3, 128, 128],  # 3x3 filter, depth 128.
+    #                             stddev=0.1,
+    #                             seed=SEED, dtype=data_type()))
+    # conv6_biases = tf.Variable(tf.zeros([128], dtype=data_type()))
     conv7_weights = tf.Variable(tf.truncated_normal([3, 3, 128, 256],  # 3x3 filter, depth 256.
                                 stddev=0.1,
                                 seed=SEED, dtype=data_type()))
     conv7_biases = tf.Variable(tf.zeros([256], dtype=data_type()))
-    conv8_weights = tf.Variable(tf.truncated_normal([3, 3, 256, 256],  # 3x3 filter, depth 256.
-                                stddev=0.1,
-                                seed=SEED, dtype=data_type()))
-    conv8_biases = tf.Variable(tf.zeros([256], dtype=data_type()))
-    conv9_weights = tf.Variable(tf.truncated_normal([3, 3, 256, 256],  # 3x3 filter, depth 256.
-                                stddev=0.1,
-                                seed=SEED, dtype=data_type()))
-    conv9_biases = tf.Variable(tf.zeros([256], dtype=data_type()))
+    # conv8_weights = tf.Variable(tf.truncated_normal([3, 3, 256, 256],  # 3x3 filter, depth 256.
+    #                             stddev=0.1,
+    #                             seed=SEED, dtype=data_type()))
+    # conv8_biases = tf.Variable(tf.zeros([256], dtype=data_type()))
+    # conv9_weights = tf.Variable(tf.truncated_normal([3, 3, 256, 256],  # 3x3 filter, depth 256.
+    #                             stddev=0.1,
+    #                             seed=SEED, dtype=data_type()))
+    # conv9_biases = tf.Variable(tf.zeros([256], dtype=data_type()))
     conv10_weights = tf.Variable(tf.truncated_normal([3, 3, 256, 512],  # 3x3 filter, depth 512.
                                 stddev=0.1,
                                 seed=SEED, dtype=data_type()))
     conv10_biases = tf.Variable(tf.zeros([512], dtype=data_type()))
-    conv11_weights = tf.Variable(tf.truncated_normal([3, 3, 512, 512],  # 3x3 filter, depth 512.
-                                 stddev=0.1,
-                                 seed=SEED, dtype=data_type()))
-    conv11_biases = tf.Variable(tf.zeros([512], dtype=data_type()))
-    conv12_weights = tf.Variable(tf.truncated_normal([3, 3, 512, 512],  # 3x3 filter, depth 512.
-                                 stddev=0.1,
-                                 seed=SEED, dtype=data_type()))
-    conv12_biases = tf.Variable(tf.zeros([512], dtype=data_type()))
+    # conv11_weights = tf.Variable(tf.truncated_normal([3, 3, 512, 512],  # 3x3 filter, depth 512.
+    #                              stddev=0.1,
+    #                              seed=SEED, dtype=data_type()))
+    # conv11_biases = tf.Variable(tf.zeros([512], dtype=data_type()))
+    # conv12_weights = tf.Variable(tf.truncated_normal([3, 3, 512, 512],  # 3x3 filter, depth 512.
+    #                              stddev=0.1,
+    #                              seed=SEED, dtype=data_type()))
+    # conv12_biases = tf.Variable(tf.zeros([512], dtype=data_type()))
     conv13_weights = tf.Variable(tf.truncated_normal([3, 3, 512, 512],  # 3x3 filter, depth 512.
                                  stddev=0.1,
                                  seed=SEED, dtype=data_type()))
     conv13_biases = tf.Variable(tf.zeros([512], dtype=data_type()))
-    conv14_weights = tf.Variable(tf.truncated_normal([3, 3, 512, 512],  # 3x3 filter, depth 512.
-                                 stddev=0.1,
-                                 seed=SEED, dtype=data_type()))
-    conv14_biases = tf.Variable(tf.zeros([512], dtype=data_type()))
-    conv15_weights = tf.Variable(tf.truncated_normal([3, 3, 512, 512],  # 3x3 filter, depth 512.
-                                 stddev=0.1,
-                                 seed=SEED, dtype=data_type()))
-    conv15_biases = tf.Variable(tf.zeros([512], dtype=data_type()))
+    # conv14_weights = tf.Variable(tf.truncated_normal([3, 3, 512, 512],  # 3x3 filter, depth 512.
+    #                              stddev=0.1,
+    #                              seed=SEED, dtype=data_type()))
+    # conv14_biases = tf.Variable(tf.zeros([512], dtype=data_type()))
+    # conv15_weights = tf.Variable(tf.truncated_normal([3, 3, 512, 512],  # 3x3 filter, depth 512.
+    #                              stddev=0.1,
+    #                              seed=SEED, dtype=data_type()))
+    # conv15_biases = tf.Variable(tf.zeros([512], dtype=data_type()))
     fc1_weights = tf.Variable(  # fully connected, depth 512.
         tf.truncated_normal([IMAGE_SIZE // 64 * IMAGE_SIZE // 64 * 512, 4096],
                             stddev=0.1,
@@ -222,12 +204,12 @@ def main(_):
                         padding='SAME')
         # Bias and rectified linear non-linearity.
         relu = tf.nn.relu(tf.nn.bias_add(conv, conv1_biases))
-        conv = tf.nn.conv2d(relu,
-                        conv2_weights,
-                        strides=[1, 1, 1, 1],
-                        padding='SAME')
-        # Bias and rectified linear non-linearity.
-        relu = tf.nn.relu(tf.nn.bias_add(conv, conv2_biases))
+        # conv = tf.nn.conv2d(relu,
+        #                 conv2_weights,
+        #                 strides=[1, 1, 1, 1],
+        #                 padding='SAME')
+        # # Bias and rectified linear non-linearity.
+        # relu = tf.nn.relu(tf.nn.bias_add(conv, conv2_biases))
         pool = tf.nn.max_pool(relu,
                           ksize=[1, 2, 2, 1],
                           strides=[1, 2, 2, 1],
@@ -237,11 +219,11 @@ def main(_):
                         strides=[1, 1, 1, 1],
                         padding='SAME')
         relu = tf.nn.relu(tf.nn.bias_add(conv, conv3_biases))
-        conv = tf.nn.conv2d(relu,
-                        conv4_weights,
-                        strides=[1, 1, 1, 1],
-                        padding='SAME')
-        relu = tf.nn.relu(tf.nn.bias_add(conv, conv4_biases))
+        # conv = tf.nn.conv2d(relu,
+        #                 conv4_weights,
+        #                 strides=[1, 1, 1, 1],
+        #                 padding='SAME')
+        # relu = tf.nn.relu(tf.nn.bias_add(conv, conv4_biases))
         pool = tf.nn.max_pool(relu,
                           ksize=[1, 2, 2, 1],
                           strides=[1, 2, 2, 1],
@@ -251,11 +233,11 @@ def main(_):
                         strides=[1, 1, 1, 1],
                         padding='SAME')
         relu = tf.nn.relu(tf.nn.bias_add(conv, conv5_biases))
-        conv = tf.nn.conv2d(relu,
-                        conv6_weights,
-                        strides=[1, 1, 1, 1],
-                        padding='SAME')
-        relu = tf.nn.relu(tf.nn.bias_add(conv, conv6_biases))
+        # conv = tf.nn.conv2d(relu,
+        #                 conv6_weights,
+        #                 strides=[1, 1, 1, 1],
+        #                 padding='SAME')
+        # relu = tf.nn.relu(tf.nn.bias_add(conv, conv6_biases))
         pool = tf.nn.max_pool(relu,
                           ksize=[1, 2, 2, 1],
                           strides=[1, 2, 2, 1],
@@ -265,16 +247,16 @@ def main(_):
                         strides=[1, 1, 1, 1],
                         padding='SAME')
         relu = tf.nn.relu(tf.nn.bias_add(conv, conv7_biases))
-        conv = tf.nn.conv2d(relu,
-                        conv8_weights,
-                        strides=[1, 1, 1, 1],
-                        padding='SAME')
-        relu = tf.nn.relu(tf.nn.bias_add(conv, conv8_biases))
-        conv = tf.nn.conv2d(relu,
-                        conv9_weights,
-                        strides=[1, 1, 1, 1],
-                        padding='SAME')
-        relu = tf.nn.relu(tf.nn.bias_add(conv, conv9_biases))
+        # conv = tf.nn.conv2d(relu,
+        #                 conv8_weights,
+        #                 strides=[1, 1, 1, 1],
+        #                 padding='SAME')
+        # relu = tf.nn.relu(tf.nn.bias_add(conv, conv8_biases))
+        # conv = tf.nn.conv2d(relu,
+        #                 conv9_weights,
+        #                 strides=[1, 1, 1, 1],
+        #                 padding='SAME')
+        # relu = tf.nn.relu(tf.nn.bias_add(conv, conv9_biases))
         pool = tf.nn.max_pool(relu,
                           ksize=[1, 2, 2, 1],
                           strides=[1, 2, 2, 1],
@@ -284,16 +266,16 @@ def main(_):
                         strides=[1, 1, 1, 1],
                         padding='SAME')
         relu = tf.nn.relu(tf.nn.bias_add(conv, conv10_biases))
-        conv = tf.nn.conv2d(relu,
-                        conv11_weights,
-                        strides=[1, 1, 1, 1],
-                        padding='SAME')
-        relu = tf.nn.relu(tf.nn.bias_add(conv, conv11_biases))
-        conv = tf.nn.conv2d(relu,
-                        conv12_weights,
-                        strides=[1, 1, 1, 1],
-                        padding='SAME')
-        relu = tf.nn.relu(tf.nn.bias_add(conv, conv12_biases))
+        # conv = tf.nn.conv2d(relu,
+        #                 conv11_weights,
+        #                 strides=[1, 1, 1, 1],
+        #                 padding='SAME')
+        # relu = tf.nn.relu(tf.nn.bias_add(conv, conv11_biases))
+        # conv = tf.nn.conv2d(relu,
+        #                 conv12_weights,
+        #                 strides=[1, 1, 1, 1],
+        #                 padding='SAME')
+        # relu = tf.nn.relu(tf.nn.bias_add(conv, conv12_biases))
         pool = tf.nn.max_pool(relu,
                           ksize=[1, 2, 2, 1],
                           strides=[1, 2, 2, 1],
@@ -303,16 +285,7 @@ def main(_):
                         strides=[1, 1, 1, 1],
                         padding='SAME')
         relu = tf.nn.relu(tf.nn.bias_add(conv, conv13_biases))
-        conv = tf.nn.conv2d(relu,
-                        conv14_weights,
-                        strides=[1, 1, 1, 1],
-                        padding='SAME')
-        relu = tf.nn.relu(tf.nn.bias_add(conv, conv14_biases))
-        conv = tf.nn.conv2d(relu,
-                        conv15_weights,
-                        strides=[1, 1, 1, 1],
-                        padding='SAME')
-        relu = tf.nn.relu(tf.nn.bias_add(conv, conv15_biases))
+
         pool = tf.nn.max_pool(relu,
                           ksize=[1, 2, 2, 1],
                           strides=[1, 2, 2, 1],
