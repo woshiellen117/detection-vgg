@@ -8,22 +8,41 @@ import xlrd
 import time
 import numpy as np
 
+# useful_data_cut--2000
+# 条缺 1758
+# 圆缺 8956
+# 未熔合 450
+# 夹渣 70
+# 裂纹 916
+# 气孔 96
+# 条孔 204
+# 条渣 899
+# 未焊透 284
+
 IMAGE_SIZE = 448
-NUM_IMAGES = 10000
+
+NUM_IMAGES = 1915
+VALIDATION_SIZE = 400
+TEST_SIZE = 40
+TEST_IMAGES_BEGIN = 1800
+TEST_IMAGES_END = 1915
+
+# NUM_IMAGES = 10000
+# VALIDATION_SIZE = 2000
+# TEST_SIZE = 200
+# TEST_IMAGES_BEGIN = 12000
+# TEST_IMAGES_END = 12500
+
 NUM_CHANNELS = 1
 PIXEL_DEPTH = 255
-VALIDATION_SIZE = 2000
 NUM_EPOCHS = 10
 BATCH_SIZE = 16
 EVAL_BATCH_SIZE = 16
-DEFECT = "未焊透"
+DEFECT = "条缺"
 SEED = 66478
 NUM_LABELS = 2
 LEARNING_RATE = 0.1
 EVAL_FREQUENCY = 100
-TEST_SIZE = 200
-TEST_IMAGES_BEGIN = 12000
-TEST_IMAGES_END =12500
 FLAGS = None
 REMARKS = 18 #备注在表中列数
 DEFECTS = 3 #缺陷在表中列数
@@ -72,11 +91,12 @@ def error_rate(predictions, labels):
       predictions.shape[0])
 
 def main(_):
-    # file_path = "/Volumes/TOSHIBA EXT/final/try"
-    file_path = "D:\\final\\useful_data"
+    file_path = "/Volumes/TOSHIBA EXT/final/useful_data_cut"
     str = file_path + '/*.png'
-    # xml_path = "/Volumes/TOSHIBA EXT/final/final.xlsx"
-    xml_path = "D:\\final\\useful_data\\useful_data.xlsx"
+    xml_path = "/Volumes/TOSHIBA EXT/final/useful_data_cut/useful_data_cut.xls"
+    # file_path = "D:\\final\\useful_data"
+    # str = file_path + '/*.png'
+    # xml_path = "D:\\final\\useful_data\\useful_data.xlsx"
     labels = load_label(xml_path)
     coll = io.ImageCollection(str)
     images = []
