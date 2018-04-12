@@ -6,7 +6,7 @@ import pylab as pl
 import skimage.io as io
 import xlrd
 SERIAL_NUM = 0
-NUM_PIC = 13768
+NUM_PIC = 1820
 IMAGE_SIZE = 700
 #
 # # 灰度化读取图片
@@ -16,23 +16,24 @@ IMAGE_SIZE = 700
 def load_name(xml_path):
     labels_xml = xlrd.open_workbook(xml_path)
     labels_table = labels_xml.sheets()[0]
-    serial_number = labels_table.col_values(SERIAL_NUM)[1:NUM_PIC+1]
+    serial_number = labels_table.col_values(SERIAL_NUM)[1924-1:3743]
     return serial_number
 
-file_path = "/Volumes/TOSHIBA EXT/final/useful_data"
+file_path = "D:/final/useful_data_1924-3743"
 str1= file_path + '/*.png'
 # str1 = file_path + '/0.png'
 coll = io.ImageCollection(str1)
 
-xml_path = "/Volumes/TOSHIBA EXT/final/useful_data/useful_data.xls"
+xml_path = "D:/final/useful_data/useful_data.xls"
 name = load_name(xml_path)
 
 for mm in range(NUM_PIC):
     print('No.')
     print(mm)
-    image = cv2.resize(coll[mm], (IMAGE_SIZE, coll[mm].shape[1]), interpolation=cv2.INTER_CUBIC)
+    # image = cv2.resize(coll[mm], (IMAGE_SIZE, coll[mm].shape[1]), interpolation=cv2.INTER_CUBIC)
     # 创建一个空白图片(img.shape[0]为height,img.shape[1]为width)
-    paintx = np.zeros(image.shape, np.uint8)
+    image = coll[mm]
+    # paintx = np.zeros(image.shape, np.uint8)
 
     # 将新图像数组中的所有通道元素的值都设置为0
     # cv2.cv.Zero(cv2.cv.fromarray(paintx))
@@ -122,7 +123,7 @@ for mm in range(NUM_PIC):
         for y in range(coll[mm].shape[0]):
             cut[y][cut_x] = coll[mm][y][x]
         cut_x=cut_x+1
-    print(str(name[mm]))
+    print(int(left))
+    print(int(right))
     print(name[mm])
-    cv2.imwrite('/Volumes/TOSHIBA EXT/final/useful_data_cut_1_func/'+str(int(name[mm]))+'.jpg', paintx)
-    cv2.imwrite('/Volumes/TOSHIBA EXT/final/useful_data_cut_1/'+str(int(name[mm]))+'.jpg', cut)
+    cv2.imwrite('D:/final/useful_data_cut/'+str(int(name[mm]))+'.jpg', cut)
