@@ -5,29 +5,28 @@ import numpy as np
 import pylab as pl
 import skimage.io as io
 import xlrd
+import os
 SERIAL_NUM = 0
 NUM_PIC = 1603
-#
-# # 灰度化读取图片
-# file_path = "/Volumes/TOSHIBA EXT/final/useful_data"
-# str = file_path + '/16633.png'
-# image = cv2.imread(str, 0)
-def load_name(xml_path):
-    labels_xml = xlrd.open_workbook(xml_path)
-    labels_table = labels_xml.sheets()[0]
-    serial_number = labels_table.col_values(SERIAL_NUM)[4106-1:5708]
-    return serial_number
 
+
+def getFileName(path):
+    ''' 获取指定目录下的所有指定后缀的文件名 '''
+    f_list = os.listdir(path)
+    imagename = []
+    for i in f_list:
+        # os.path.splitext():分离文件名与扩展名
+        if os.path.splitext(i)[1] == '.png':
+            imagename.append[i]
+    return imagename
 # file_path = "D:/final/useful_data_1924-3743"
 file_path ="/Volumes/TOSHIBA EXT/final/useful_data_3298-5708"
 str1= file_path + '/*.png'
-# str1 = file_path + '/0.png'
 coll = io.ImageCollection(str1)
 
-xml_path = "/Volumes/TOSHIBA EXT/final/useful_data/useful_data.xls"
-name = load_name(xml_path)
+image_names = getFileName(file_path)
 
-for mm in range(NUM_PIC):
+for mm in range(len(image_names)):
     print('No.')
     print(mm)
     # image = cv2.resize(coll[mm], (IMAGE_SIZE, coll[mm].shape[1]), interpolation=cv2.INTER_CUBIC)
@@ -126,4 +125,4 @@ for mm in range(NUM_PIC):
             cut[y][cut_x] = coll[mm][y][x]
         cut_x=cut_x+1
 
-    cv2.imwrite('/Volumes/TOSHIBA EXT/final/useful_data_cut_3298-5708/'+str(int(name[mm]))+'.png', cut)
+    cv2.imwrite('/Volumes/TOSHIBA EXT/final/useful_data_cut_3298-5708/'+str(int(image_names[mm])), cut)
