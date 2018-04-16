@@ -6,8 +6,7 @@ import pylab as pl
 import skimage.io as io
 import xlrd
 SERIAL_NUM = 0
-NUM_PIC = 1820
-IMAGE_SIZE = 700
+NUM_PIC = 1603
 #
 # # 灰度化读取图片
 # file_path = "/Volumes/TOSHIBA EXT/final/useful_data"
@@ -16,15 +15,16 @@ IMAGE_SIZE = 700
 def load_name(xml_path):
     labels_xml = xlrd.open_workbook(xml_path)
     labels_table = labels_xml.sheets()[0]
-    serial_number = labels_table.col_values(SERIAL_NUM)[1924-1:3743]
+    serial_number = labels_table.col_values(SERIAL_NUM)[4106-1:5708]
     return serial_number
 
-file_path = "D:/final/useful_data_1924-3743"
+# file_path = "D:/final/useful_data_1924-3743"
+file_path ="/Volumes/TOSHIBA EXT/final/useful_data_3298-5708"
 str1= file_path + '/*.png'
 # str1 = file_path + '/0.png'
 coll = io.ImageCollection(str1)
 
-xml_path = "D:/final/useful_data/useful_data.xls"
+xml_path = "/Volumes/TOSHIBA EXT/final/useful_data/useful_data.xls"
 name = load_name(xml_path)
 
 for mm in range(NUM_PIC):
@@ -78,7 +78,7 @@ for mm in range(NUM_PIC):
                 while i - 2 >= 0 and abs(p1(root1[i - 1]) - p1(root1[i - 2]) <= 300) and p1(root1[i - 1]) <= 350:
                     right = root1[i - 2]
                     i = i - 1
-                if i - 2 >= 0:
+                if i - 2 <= 0:
                     right = root1[0]
                 elif p1(root[i - 1]) > 350:
                     right = root1[i - 1]
@@ -119,11 +119,11 @@ for mm in range(NUM_PIC):
 
     cut = np.zeros((coll[mm].shape[0],int(right)-int(left)+1), np.uint8)
     cut_x=0
+    print(int(left))
+    print(int(right))
     for x in range(int(left), int(right)+1):
         for y in range(coll[mm].shape[0]):
             cut[y][cut_x] = coll[mm][y][x]
         cut_x=cut_x+1
-    print(int(left))
-    print(int(right))
-    print(name[mm])
-    cv2.imwrite('D:/final/useful_data_cut/'+str(int(name[mm]))+'.jpg', cut)
+
+    cv2.imwrite('/Volumes/TOSHIBA EXT/final/useful_data_cut_3298-5708/'+str(int(name[mm]))+'.png', cut)
